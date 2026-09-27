@@ -1,0 +1,27 @@
+{
+  "name": "@human-lab/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "数字人后端：Express + TS，内聚能力层（TTS/存储）与任务编排",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "smoke": "tsx src/smoke.ts"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@human-lab/shared": "*",
+    "express": "^5.0.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

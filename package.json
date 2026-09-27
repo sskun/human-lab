@@ -1,0 +1,24 @@
+{
+  "name": "human-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "数字人 demo：文本 → 语音 → 口型视频（monorepo：apps/* 应用 + packages/* 共享包）",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @human-lab/shared && npm run build -w @human-lab/server",
+    "dev:server": "npm run dev -w @human-lab/server",
+    "dev:web": "npm run dev -w @human-lab/web",
+    "start": "npm run start -w @human-lab/server",
+    "tts": "npm run build -w @human-lab/server && node lego/01-tts/tts-dashscope.mjs",
+    "asr": "npm run build -w @human-lab/server && node lego/02-asr/asr-dashscope.mjs",
+    "llm": "npm run build -w @human-lab/server && node lego/03-llm/llm-chat.mjs",
+    "test": "npm run smoke -w @human-lab/server"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
