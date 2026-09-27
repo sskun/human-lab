@@ -144,11 +144,12 @@ class LipSyncProvider(Protocol):
 ```
 human-lab/
 ├─ apps/
-│  ├─ server/             # Express + TS（:3001）：POST /api/speak、GET /api/tasks/:id、/media 静态
+│  ├─ server/             # NestJS + TS（:3001）：POST /api/speak、GET /api/tasks/:id、/media 静态
 │  │  └─ src/
-│  │     ├─ index.ts / tasks.ts          # HTTP 入口 + 任务编排
-│  │     ├─ capabilities/tts.ts          # TTS 能力（DashScope tts_v2 ws 协议）✅
-│  │     ├─ db.ts                        # SQLite（data/human-lab.db，node:sqlite 零依赖）
+│  │     ├─ main.ts / app.module.ts      # 启动入口 + 根模块
+│  │     ├─ tasks/ / chat/               # 任务与聊天编排 + 各自的 Controller
+│  │     ├─ capabilities/                # TTS/ASR/LLM 能力（纯能力层 + *.service.ts DI 封装）✅
+│  │     ├─ database/                    # SQLite（data/human-lab.db，node:sqlite 零依赖）
 │  │     └─ config.ts                    # OUTPUT_DIR / DATA_DIR / .env 加载
 │  └─ web/                # Vite + React + TS（:5173，/api、/media 代理到 3001）
 │     └─ src/{App.tsx, main.tsx}
@@ -162,7 +163,7 @@ human-lab/
 └─ .env                   # 密钥配置（gitignore）
 ```
 
-> 分层依据：`shared` 只放跨 app 的类型契约（行业惯例）；能力与存储的消费方目前仅 server，故内聚在其 `src/capabilities/` 与 `db.ts`。出现第二个服务端消费方（如独立 worker）时再抽 `packages/core`。
+> 分层依据：`shared` 只放跨 app 的类型契约（行业惯例）；能力与存储的消费方目前仅 server，故内聚在其 `src/capabilities/` 与 `database/`。出现第二个服务端消费方（如独立 worker）时再抽 `packages/core`。
 > 云端 API 路线全链路用 Node/TS（无官方 Node SDK 的部分直接实现协议）；若走本地开源模型路线，Python 侧作为独立进程被 Node 调度。
 
 ---

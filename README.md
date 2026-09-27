@@ -8,16 +8,19 @@
 ```
 human-lab/
 ├─ apps/
-│  ├─ server/             # 后端：Express + TypeScript（端口 3001）
+│  ├─ server/             # 后端：NestJS + TypeScript（端口 3001）
 │  │  └─ src/
-│  │     ├─ index.ts      # HTTP 入口：/api/speak、/api/listen、/api/chat/*、/api/tasks、/media
-│  │     ├─ tasks.ts      # 任务编排：受理 → 执行（TTS 异步 / ASR 同步）→ 状态回写
-│  │     ├─ chat.ts       # 实时聊天编排：会话制，每轮 ASR→LLM(带上下文)→TTS，明细落库
+│  │     ├─ main.ts       # 启动入口：JSON 上限 16MB、/media 静态挂载、全局异常过滤
+│  │     ├─ app.module.ts # 根模块：config / database / capabilities / tasks / chat
+│  │     ├─ tasks/        # 任务编排 + 接口：/api/speak、/api/listen、/api/tasks
+│  │     ├─ chat/         # 实时聊天编排 + 接口：/api/chat/*，每轮 ASR→LLM(带上下文)→TTS
 │  │     ├─ capabilities/
-│  │     │  ├─ tts.ts     # TTS 能力（DashScope tts_v2 WebSocket 协议）
+│  │     │  ├─ tts.ts     # TTS 能力（DashScope tts_v2 WebSocket 协议，纯能力层）
 │  │     │  ├─ asr.ts     # ASR 能力（qwen-audio-3.1-asr-flash，multimodal-generation HTTP 协议）
-│  │     │  └─ llm.ts     # LLM 能力（OpenAI 兼容 chat/completions，流式 SSE，实时聊天备料）
-│  │     ├─ db.ts         # SQLite 任务存储（Node 内置 node:sqlite，零依赖）
+│  │     │  ├─ llm.ts     # LLM 能力（OpenAI 兼容 chat/completions，流式 SSE，实时聊天备料）
+│  │     │  └─ *.service.ts # 能力层的 DI 封装（进入 Nest 注入体系）
+│  │     ├─ database/     # SQLite 持久化（Node 内置 node:sqlite）：DatabaseService + tasks/chat 仓库
+│  │     ├─ common/       # base64 音频校验解码、全局异常过滤器（统一 { error } 响应）
 │  │     └─ config.ts     # 配置：环境变量 > .env > 默认值；OUTPUT_DIR/DATA_DIR
 │  └─ web/                # 前端：Vite + React + TypeScript（端口 5173）
 │     └─ src/
@@ -36,7 +39,7 @@ human-lab/
 └─ .env                   # 密钥与配置（gitignore，勿提交）
 ```
 
-**分层依据**：`shared` 按行业惯例只放"两边都要认的类型契约"；TTS 能力和 db 的消费方目前只有 server（web 走 HTTP），因此内聚在 `apps/server/src`——能力归 `capabilities/`，存储归 `db.ts`。未来若出现第二个服务端消费方（如独立合成 worker），再抽成 `packages/core`。
+**分层依据**：`shared` 按行业惯例只放"两边都要认的类型契约"；TTS 能力和数据库的消费方目前只有 server（web 走 HTTP），因此内聚在 `apps/server/src`——能力归 `capabilities/`（纯函数层，lego CLI 直接引用构建产物），存储归 `database/`，HTTP 与编排归各业务模块。未来若出现第二个服务端消费方（如独立合成 worker），再抽成 `packages/core`。
 
 ## 快速开始
 
@@ -49,7 +52,7 @@ npm run dev:web            # 终端2：前端 http://localhost:5173（/api、/me
 其他命令：
 
 ```bash
-npm run build              # 构建 shared + server（tsc）
+npm run build              # 构建 shared + server（nest build）
 npm test                   # 冒烟测试（真实调用：TTS 合成 → ASR 识别 → LLM 对话各一次）
 npm run tts                # 乐高块01 CLI：命令行直接合成语音
 npm run asr                # 乐高块02 CLI：命令行识别音频文件/URL → 文字
@@ -89,7 +92,9 @@ web(ChatPanel) ──POST /api/chat/sessions──▶ 创建会话（点击「�
 ## 能力调用方式（server 内部）
 
 ```ts
-// apps/server 内任意模块（能力层保持纯粹：不碰 HTTP、不写 DB，任务记录由 tasks.ts 负责）
+// capabilities/ 能力层保持纯粹：不碰 HTTP、不写 DB，任务记录由 tasks/chat 编排层负责。
+// 业务代码经 DI 使用：TasksService/ChatService 注入 TtsService/AsrService/LlmService。
+// lego CLI 与冒烟测试则直接用下面的一行调用函数（引用 dist/capabilities 构建产物）：
 import { synthesizeSpeech } from './capabilities/tts.js';
 import { recognizeSpeech } from './capabilities/asr.js';
 import { chat, type ChatMessage } from './capabilities/llm.js';
@@ -114,6 +119,6 @@ await chat(history, { onContent: (d) => append(d) });       // 传回调即流�
 | 02 | ASR 语音识别（`apps/server/src/capabilities/asr.ts`，设计见 docs/asr-design.md） | ✅ |
 | 03 | LLM 对话回复（`apps/server/src/capabilities/llm.ts`，流式/思考/多轮，实时聊天备料） | ✅ |
 | 04 | 口播视频（口播稿 + 形象图 → 数字人口播，选型万相 wan3.0-video-prime，设计见 docs/lipsync-design.md） | 📐 设计完成 |
-| 05 | 服务化（Express 任务接口） | ✅（合成 + 识别 + 聊天会话） |
+| 05 | 服务化（NestJS 任务接口） | ✅（合成 + 识别 + 聊天会话） |
 | 06 | 前端网页 | ✅（聊天面板 + 朗读面板 + 历史明细） |
 | 07 | 实时聊天（语音 → ASR → LLM → TTS 全链路对话） | ✅（免按键连续对话 + 明细落库） |

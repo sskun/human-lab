@@ -1,23 +1,29 @@
 {
   "name": "@human-lab/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "数字人后端：Express + TS，内聚能力层（TTS/存储）与任务编排",
+  "description": "数字人后端：NestJS，内聚能力层（TTS/ASR/LLM）与任务编排",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/main.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
     "smoke": "tsx src/smoke.ts"
   },
   "license": "ISC",
   "dependencies": {
     "@human-lab/shared": "*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
     "express": "^5.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/ws": "^8.5.13",
