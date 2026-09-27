@@ -1,76 +1,138 @@
-/* 极简样式：居中卡片式布局，够用就行 */
+/* 数字人 Demo 样式：柔和渐变底 + 白卡片，聊天气泡带入场动效，状态用彩色胶囊，加载态统一小转圈 */
 * {
   box-sizing: border-box;
+}
+
+:root {
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --ink: #1e293b;
+  --ink-2: #475569;
+  --muted: #94a3b8;
+  --line: #e6eaf1;
+  --red: #dc2626;
+  --radius-lg: 18px;
 }
 
 body {
   margin: 0;
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: #f5f6f8;
+  color: var(--ink);
+  min-height: 100vh;
+  background:
+    radial-gradient(640px 320px at 12% -6%, rgba(59, 130, 246, 0.14), transparent 60%),
+    radial-gradient(520px 300px at 92% -2%, rgba(139, 92, 246, 0.11), transparent 60%),
+    linear-gradient(180deg, #f2f5fb, #eef1f6);
 }
 
+code {
+  background: rgba(100, 116, 139, 0.12);
+  border-radius: 5px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
+/* —— 页面卡片 —— */
 .page {
-  max-width: 560px;
-  margin: 48px auto;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  max-width: 640px;
+  margin: 40px auto 56px;
+  padding: 30px 32px 28px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 22px;
+  box-shadow: 0 10px 34px rgba(30, 41, 99, 0.09);
+}
+
+/* —— 头部 —— */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 27px;
+  background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+  box-shadow: 0 6px 16px rgba(96, 116, 246, 0.35);
+  animation: float 3.4s ease-in-out infinite;
 }
 
 h1 {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   font-size: 22px;
+  letter-spacing: 0.5px;
 }
 
 .subtitle {
-  margin: 0 0 16px;
-  color: #888;
+  margin: 0;
+  color: var(--ink-2);
   font-size: 13px;
 }
 
+/* —— 输入框 —— */
 .input {
   width: 100%;
-  padding: 10px;
+  padding: 10px 12px;
   font-size: 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  color: var(--ink);
+  border: 1px solid #dfe4ec;
+  border-radius: 10px;
+  background: #fff;
   resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.input:focus,
+.chat-input:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+/* —— 按钮 —— */
 .btn {
   margin-top: 12px;
-  padding: 8px 20px;
+  padding: 9px 18px;
   font-size: 14px;
+  font-weight: 500;
   color: #fff;
-  background: #2563eb;
+  background: linear-gradient(135deg, #4c8dff, var(--blue-600));
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  filter: brightness(1.05);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
 }
 
 .btn:disabled {
-  background: #9db4e8;
+  background: #b9cbf3;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-.status {
-  margin: 14px 0 4px;
-  font-size: 14px;
-  color: #555;
-}
-
-.error {
-  color: #dc2626;
-  font-size: 13px;
-}
-
-.player {
-  width: 100%;
-  margin-top: 12px;
-}
-
-/* —— 按住说话（语音识别）—— */
 .btn-row {
   display: flex;
   gap: 10px;
@@ -81,6 +143,31 @@ h1 {
   margin-top: 0;
 }
 
+/* 次级按钮：浅灰底 */
+.mute-btn {
+  background: #eef1f6;
+  color: var(--ink-2);
+  box-shadow: none;
+}
+
+.mute-btn:hover:not(:disabled) {
+  background: #e3e8f0;
+  box-shadow: none;
+}
+
+/* 危险按钮：浅红底 */
+.end-btn {
+  background: #fef2f2;
+  color: var(--red);
+  box-shadow: none;
+}
+
+.end-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  box-shadow: none;
+  filter: none;
+}
+
 /* 麦克风按钮：默认低调灰底，录音中变红并呼吸 */
 .mic-btn {
   background: #eef1f6;
@@ -88,6 +175,13 @@ h1 {
   touch-action: none; /* 触屏按住时不滚动/缩放，保证能收到 pointerup */
   user-select: none;
   -webkit-user-select: none;
+  box-shadow: none;
+}
+
+.mic-btn:hover:not(:disabled) {
+  background: #e6ebf3;
+  box-shadow: none;
+  filter: none;
 }
 
 .mic-btn:disabled {
@@ -112,27 +206,53 @@ h1 {
   }
 }
 
-/* —— 模式页签 —— */
+/* —— 加载转圈（currentColor 着色，按钮/胶囊里都好用）—— */
+.spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid rgba(30, 41, 99, 0.15);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* —— 模式页签（分段控件）—— */
 .tabs {
-  display: flex;
-  gap: 8px;
-  margin: 14px 0 18px;
+  display: inline-flex;
+  gap: 4px;
+  margin: 20px 0 18px;
+  padding: 4px;
+  background: #edf0f6;
+  border-radius: 999px;
 }
 
 .tab-btn {
-  padding: 6px 14px;
+  padding: 7px 16px;
   font-size: 13px;
-  border: 1px solid #ddd;
+  border: none;
   border-radius: 999px;
-  background: #fff;
-  color: #666;
+  background: transparent;
+  color: var(--ink-2);
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tab-btn:hover {
+  color: var(--ink);
 }
 
 .tab-btn.on {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background: #fff;
+  color: var(--blue-600);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(30, 41, 99, 0.14);
 }
 
 /* —— 会话控制条 —— */
@@ -140,12 +260,35 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 36px;
+  min-height: 40px;
+  flex-wrap: wrap;
+}
+
+.session-bar .btn {
+  margin-top: 0;
 }
 
 .session-bar .status {
   margin: 0;
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.status {
+  margin: 14px 0 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.task-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .session-dot {
@@ -161,24 +304,102 @@ h1 {
   animation: rec-pulse 1.6s ease-in-out infinite;
 }
 
-.end-btn {
-  background: #6b7280;
+.session-dot.listening {
+  background: #16a34a;
+  animation: rec-pulse 1.6s ease-in-out infinite;
+}
+
+/* —— 状态胶囊 —— */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  animation: bubble-in 0.25s ease both;
+}
+
+.pill .spinner {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+}
+
+.pill-listening {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.pill-speaking {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.pill-thinking {
+  background: #eff6ff;
+  color: var(--blue-600);
+}
+
+.pill-playing {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.pill-paused,
+.pill-ended {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pill-failed {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* —— 错误提示 —— */
+.error {
+  color: var(--red);
+  font-size: 13px;
+}
+
+.error-banner {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  line-height: 1.6;
+  animation: bubble-in 0.25s ease both;
 }
 
 /* —— 对话气泡区 —— */
 .chat-box {
-  margin-top: 14px;
-  padding: 12px;
-  max-height: 340px;
+  margin-top: 16px;
+  padding: 16px 14px 10px;
+  max-height: 440px;
   overflow-y: auto;
-  background: #f7f8fa;
-  border: 1px solid #e8ebf0;
-  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fafc, #f4f6fa);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  scroll-behavior: smooth;
+}
+
+.chat-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-box::-webkit-scrollbar-thumb {
+  background: #d3dae6;
+  border-radius: 3px;
 }
 
 .row {
   display: flex;
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
 .row.user {
@@ -187,28 +408,48 @@ h1 {
 
 .row.assistant {
   justify-content: flex-start;
+  gap: 8px;
+}
+
+/* 小泡泡头像 */
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: none;
+  align-self: flex-end;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: linear-gradient(135deg, #dbeafe, #ede9fe);
+  box-shadow: 0 1px 3px rgba(30, 41, 99, 0.12);
 }
 
 .bubble {
-  max-width: 82%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.5;
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+  animation: bubble-in 0.28s cubic-bezier(0.2, 0.7, 0.3, 1.08) both;
 }
 
 .bubble.user {
-  background: #2563eb;
+  background: linear-gradient(135deg, #4c8dff, var(--blue-600));
   color: #fff;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 5px;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.22);
 }
 
 .bubble.assistant {
   background: #fff;
-  border: 1px solid #e4e8ee;
-  border-bottom-left-radius: 4px;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 5px;
+  box-shadow: 0 1px 3px rgba(30, 41, 99, 0.05);
 }
 
 .bubble.failed {
@@ -221,11 +462,82 @@ h1 {
   color: #98a1b0;
 }
 
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 打字指示器：三点跳动 + 轮换的阶段文案 */
+.bubble.typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.typing-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.typing-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.typing-stage {
+  font-size: 12px;
+  color: var(--ink-2);
+  animation: stage-fade 0.4s ease both;
+}
+
+@keyframes stage-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .bubble-audio {
   display: block;
   width: 100%;
-  margin-top: 6px;
-  height: 32px;
+  margin-top: 8px;
+  height: 34px;
+  accent-color: var(--blue-600);
 }
 
 .tag {
@@ -234,6 +546,76 @@ h1 {
   margin-right: 4px;
 }
 
+.player {
+  width: 100%;
+  margin-top: 14px;
+  accent-color: var(--blue-600);
+}
+
+/* —— 空状态 —— */
+.empty-state {
+  text-align: center;
+  padding: 38px 16px 28px;
+  animation: bubble-in 0.35s ease both;
+}
+
+.empty-state.compact {
+  padding: 24px 12px 16px;
+}
+
+.empty-avatar {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 33px;
+  background: linear-gradient(135deg, #dbeafe, #ede9fe);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.empty-state.compact .empty-avatar {
+  width: 54px;
+  height: 54px;
+  font-size: 27px;
+}
+
+.empty-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.empty-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.chat-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 10px 0;
+  margin: 0;
+}
+
+/* —— 聊天输入行 —— */
 .chat-input-row {
   gap: 8px;
 }
@@ -241,51 +623,110 @@ h1 {
 .chat-input {
   flex: 1;
   margin: 0;
-  padding: 8px 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+/* —— 实时音量条（连续对话）—— */
+.level-meter {
+  position: relative;
+  width: 76px;
+  height: 8px;
+  flex: none;
+  background: #e3e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.level-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2%;
+  background: linear-gradient(90deg, #34d399, #10b981);
+  border-radius: 999px;
+  transition: width 80ms linear;
+}
+
+.level-mark {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  left: 10%;
+  background: #f87171;
+  opacity: 0.85;
 }
 
 /* —— 历史会话（输入/输出明细）—— */
 .history {
-  margin-top: 22px;
-  border-top: 1px solid #eef0f4;
-  padding-top: 12px;
+  margin-top: 26px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
 }
 
 .history h2 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #444;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--ink-2);
 }
 
 .history-item {
   margin-bottom: 8px;
-  border: 1px solid #eef0f4;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   overflow: hidden;
+  background: #fff;
+  transition: box-shadow 0.15s ease;
+}
+
+.history-item:hover {
+  box-shadow: 0 2px 10px rgba(30, 41, 99, 0.07);
 }
 
 .history-head {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 12px;
   font-size: 13px;
-  color: #555;
-  background: #fafbfc;
+  color: var(--ink-2);
+  background: #fafbfd;
   border: none;
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s ease;
 }
 
 .history-head:hover {
-  background: #f1f3f7;
+  background: #f1f4f9;
+}
+
+.history-head span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+  border-top: 1px dashed var(--line);
 }
 
 .history-turn {
-  padding: 8px 10px;
+  padding: 9px 12px;
   font-size: 13px;
-  border-top: 1px dashed #eef0f4;
-  line-height: 1.6;
+  border-top: 1px dashed var(--line);
+  line-height: 1.7;
+  animation: bubble-in 0.25s ease both;
 }
 
 .history-turn .tag {
@@ -300,17 +741,6 @@ h1 {
 
 .history-turn a.tag {
   background: #e7f0ff;
-  color: #2563eb;
+  color: var(--blue-600);
   text-decoration: none;
-}
-
-/* —— 连续对话状态 —— */
-.session-dot.listening {
-  background: #16a34a;
-  animation: rec-pulse 1.6s ease-in-out infinite;
-}
-
-.mute-btn {
-  background: #eef1f6;
-  color: #444;
 }

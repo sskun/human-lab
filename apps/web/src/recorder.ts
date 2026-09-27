@@ -191,8 +191,10 @@ export class AutoRecorder {
   /** 单句上限（到时强制切分） */
   private static MAX_UTTERANCE_MS = 15_000;
   /** 音量阈值夹取范围（校准结果的上下限） */
-  private static THRESHOLD_MIN = 0.012;
-  private static THRESHOLD_MAX = 0.1;
+  private static THRESHOLD_MIN = 0.01;
+  private static THRESHOLD_MAX = 0.08;
+  /** 相对静音：RMS 低于说话期间峰值的该比例也算"停了"（防阈值定低后停顿检不出） */
+  private static RELATIVE_QUIET = 0.15;
 
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -205,6 +207,7 @@ export class AutoRecorder {
 
   private noiseFrames: number[] = [];
   private threshold = AutoRecorder.THRESHOLD_MIN;
+  private speechPeak = 0; // 说话期间的最大 RMS（相对静音判定用）
   private speechRun = 0;
   private silenceRun = 0;
   private preroll: Float32Array[] = []; // 说话前的滚动缓冲（开口时并入整句）
@@ -212,7 +215,14 @@ export class AutoRecorder {
   private utterance: Float32Array[] = [];
   private utteranceFrames = 0;
 
-  constructor(private callbacks: { onUtterance?: (u: Utterance) => void; onStateChange?: (s: ListenState) => void } = {}) {}
+  constructor(
+    private callbacks: {
+      onUtterance?: (u: Utterance) => void;
+      onStateChange?: (s: ListenState) => void;
+      /** 每帧音量（供 UI 画实时电平条，~85ms 一次；注意回调里不要做重活/别触发 setState） */
+      onLevel?: (rms: number, threshold: number) => void;
+    } = {},
+  ) {}
 
   /** 请求麦克风并开始倾听。权限被拒时抛 NotAllowedError。 */
   async start(): Promise<void> {
@@ -275,12 +285,16 @@ export class AutoRecorder {
     const chunk = new Float32Array(raw); // inputBuffer 底层内存会被复用，必须拷贝
     const rms = Math.sqrt(chunk.reduce((s, v) => s + v * v, 0) / chunk.length);
 
-    // ① 环境噪声校准：前 N 帧取均值，阈值 = 均值×2.5（夹取到经验区间）
+    this.callbacks.onLevel?.(rms, this.threshold);
+
+    // ① 环境噪声校准：前 N 帧取中位数（均值会被校准期的说话/噪声拉高，导致阈值过高听不见人），
+    //    阈值 = 中位数×3（夹取到经验区间）
     if (this.noiseFrames.length < AutoRecorder.CALIBRATION_FRAMES) {
       this.noiseFrames.push(rms);
       if (this.noiseFrames.length >= AutoRecorder.CALIBRATION_FRAMES) {
-        const avg = this.noiseFrames.reduce((a, b) => a + b, 0) / this.noiseFrames.length;
-        this.threshold = Math.min(AutoRecorder.THRESHOLD_MAX, Math.max(AutoRecorder.THRESHOLD_MIN, avg * 2.5));
+        const sorted = [...this.noiseFrames].sort((a, b) => a - b);
+        const mid = sorted[Math.floor(sorted.length / 2)];
+        this.threshold = Math.min(AutoRecorder.THRESHOLD_MAX, Math.max(AutoRecorder.THRESHOLD_MIN, mid * 3));
         this.setState('listening');
       }
       return;
@@ -302,6 +316,7 @@ export class AutoRecorder {
         if (this.speechRun >= AutoRecorder.SPEECH_START_FRAMES) {
           this.setState('speaking');
           this.silenceRun = 0;
+          this.speechPeak = rms;
           this.utterance = [...this.preroll]; // 带上开口前的缓冲
           this.utteranceFrames = this.prerollFrames;
           this.preroll = [];
@@ -313,11 +328,14 @@ export class AutoRecorder {
       return;
     }
 
-    // ③ 说话期：累积整句，静音连续 ~0.95s（或到时长上限）判定说完
+    // ③ 说话期：累积整句，停顿判定 = 绝对静音（低于阈值）或相对静音（低于本次说话峰值的
+    //    15%，即音量明显回落）连续 ~0.95s，或到时长上限
     this.utterance.push(chunk);
     this.utteranceFrames += chunk.length;
     const durationMs = (this.utteranceFrames / this.ctx.sampleRate) * 1000;
-    this.silenceRun = rms > this.threshold ? 0 : this.silenceRun + 1;
+    this.speechPeak = Math.max(this.speechPeak, rms);
+    const quiet = rms < this.threshold || rms < this.speechPeak * AutoRecorder.RELATIVE_QUIET;
+    this.silenceRun = quiet ? this.silenceRun + 1 : 0;
     if (this.silenceRun >= AutoRecorder.SILENCE_END_FRAMES || durationMs >= AutoRecorder.MAX_UTTERANCE_MS) {
       this.emitUtterance(durationMs);
     }
@@ -346,6 +364,7 @@ export class AutoRecorder {
   private resetVad(): void {
     this.speechRun = 0;
     this.silenceRun = 0;
+    this.speechPeak = 0;
     this.preroll = [];
     this.prerollFrames = 0;
     this.utterance = [];

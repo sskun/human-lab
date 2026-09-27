@@ -187,7 +187,17 @@ export default function SpeakPanel() {
 
       <div className="btn-row">
         <button className="btn" onClick={handleSpeak} disabled={submitting || busy || recording || listening || !text.trim()}>
-          {submitting ? '提交中…' : busy ? '合成中…' : '合成语音'}
+          {submitting ? (
+            <>
+              <span className="spinner" /> 提交中…
+            </>
+          ) : busy ? (
+            <>
+              <span className="spinner" /> 合成中…
+            </>
+          ) : (
+            '合成语音'
+          )}
         </button>
         <button
           className={`btn mic-btn${recording ? ' recording' : ''}`}
@@ -204,21 +214,41 @@ export default function SpeakPanel() {
           }}
           onContextMenu={(e) => e.preventDefault()} // 长按弹出系统菜单会打断 pointerup
         >
-          {recording ? `● 录音中 0:${String(recSeconds).padStart(2, '0')}，松开结束` : listening ? '识别中…' : '🎤 按住说话'}
+          {recording ? (
+            `● 录音中 0:${String(recSeconds).padStart(2, '0')}，松开结束`
+          ) : listening ? (
+            <>
+              <span className="spinner" /> 识别中…
+            </>
+          ) : (
+            '🎤 按住说话'
+          )}
         </button>
       </div>
 
-      {error && <p className="error">出错了：{error}</p>}
+      {error && <p className="error-banner">⚠️ 出错了：{error}</p>}
       {listenNote && <p className="status">{listenNote}</p>}
 
       {task && (
-        <p className="status">
-          任务 <code>{task.id.slice(0, 8)}</code> 状态：
-          {task.status === 'queued' && '排队中…'}
-          {task.status === 'processing' && '合成中…'}
-          {task.status === 'failed' && <span className="error">失败（{task.error}）</span>}
-          {task.status === 'done' && '完成 ✔'}
-        </p>
+        <div className="status task-status">
+          <span className="pill pill-ended">
+            任务 <code>{task.id.slice(0, 8)}</code>
+          </span>
+          {task.status === 'queued' && (
+            <span className="pill pill-thinking">
+              <span className="spinner" />
+              排队中…
+            </span>
+          )}
+          {task.status === 'processing' && (
+            <span className="pill pill-thinking">
+              <span className="spinner" />
+              合成中…
+            </span>
+          )}
+          {task.status === 'failed' && <span className="pill pill-failed">失败（{task.error}）</span>}
+          {task.status === 'done' && <span className="pill pill-listening">完成 ✔</span>}
+        </div>
       )}
 
       {/* done 后展示播放器；key 使新任务自动替换旧播放器 */}

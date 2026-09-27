@@ -15,8 +15,15 @@ export default function App() {
 
   return (
     <main className="page">
-      <h1>数字人 Demo</h1>
-      <p className="subtitle">让数字人开口朗读，或与它实时聊天（听 → 想 → 说）</p>
+      <header className="hero">
+        <div className="hero-avatar" aria-hidden>
+          🫧
+        </div>
+        <div>
+          <h1>数字人 Demo</h1>
+          <p className="subtitle">让数字人开口朗读，或与它实时聊天（听 → 想 → 说）</p>
+        </div>
+      </header>
 
       <div className="tabs">
         <button className={`tab-btn${mode === 'chat' ? ' on' : ''}`} onClick={() => setMode('chat')}>
