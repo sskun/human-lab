@@ -32,7 +32,7 @@ human-lab/
 ├─ lego/                  # 各能力的"可直接 node 运行"演示块
 ├─ data/                  # SQLite 数据库（data/human-lab.db）
 ├─ output/                # 生成的语音/归档录音/口型视频（统一落这里）
-├─ docs/design.md         # 总设计文档；docs/asr-design.md 语音识别设计（含接口探测结论）
+├─ docs/design.md         # 总设计文档；分项设计见 asr-design.md（语音识别）、lipsync-design.md（形象与口型）
 └─ .env                   # 密钥与配置（gitignore，勿提交）
 ```
 
@@ -113,7 +113,7 @@ await chat(history, { onContent: (d) => append(d) });       // 传回调即流�
 | 01 | TTS 文本转语音（`apps/server/src/capabilities/tts.ts`） | ✅ |
 | 02 | ASR 语音识别（`apps/server/src/capabilities/asr.ts`，设计见 docs/asr-design.md） | ✅ |
 | 03 | LLM 对话回复（`apps/server/src/capabilities/llm.ts`，流式/思考/多轮，实时聊天备料） | ✅ |
-| 04 | 口型视频（形象 + 音频 → 视频，规划为 `capabilities/lipsync.ts`） | ⬜ |
+| 04 | 口播视频（口播稿 + 形象图 → 数字人口播，选型万相 wan3.0-video-prime，设计见 docs/lipsync-design.md） | 📐 设计完成 |
 | 05 | 服务化（Express 任务接口） | ✅（合成 + 识别 + 聊天会话） |
 | 06 | 前端网页 | ✅（聊天面板 + 朗读面板 + 历史明细） |
 | 07 | 实时聊天（语音 → ASR → LLM → TTS 全链路对话） | ✅（免按键连续对话 + 明细落库） |

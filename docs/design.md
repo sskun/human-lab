@@ -257,3 +257,7 @@ human-lab/
 - 阿里云百炼（模型广场搜「EMO视频生成」「LivePortrait」「qwen-tts」）：<https://help.aliyun.com/zh/model-studio/>
 - Sync(sync.so)：<https://sync.so> · D-ID：<https://docs.d-id.com> · HeyGen：<https://docs.heygen.com>
 - Rhubarb Lip Sync（2D 路线）：<https://github.com/DanielSWolf/rhubarb-lip-sync>
+
+---
+
+> **分项设计文档**：ASR 能力见 [docs/asr-design.md](asr-design.md)（含接口探测结论）；口播数字人 MVP 见 [docs/lipsync-design.md](lipsync-design.md)（已定选型：万相 wan3.0-video-prime 全能参考，离线口播、非实时）。
