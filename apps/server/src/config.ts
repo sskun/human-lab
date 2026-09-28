@@ -119,3 +119,51 @@ export function resolveLLMConfig(env: NodeJS.ProcessEnv = process.env): LLMConfi
     timeoutMs: env.LLM_TIMEOUT_MS ? Number(env.LLM_TIMEOUT_MS) : undefined,
   };
 }
+
+/** 口播视频（wan3.0-video-prime 全能参考）能力的配置项（docs/lipsync-design.md §4.6） */
+export interface TalkConfig {
+  apiKey?: string;
+  /** wan3.0 异步任务端点根（与 TTS/ASR/LLM 同一专属实例） */
+  baseUrl: string;
+  /** 百炼临时文件上传端点根（公网，P2 探测确认） */
+  uploadsBaseUrl: string;
+  model: string;
+  /** 输出分辨率档位：480P | 720P | 1080P */
+  resolution: string;
+  /** 画幅：口播/带货默认竖屏 9:16 */
+  ratio: string;
+  /** 视频秒数：[2,30] 整数；-1 = 智能时长（按参考音频对齐） */
+  duration: number;
+  /** prompt 智能改写：口播模板是精确指令，默认关闭 */
+  promptExtend: boolean;
+  pollIntervalMs: number;
+  timeoutMs: number;
+  /** 形象资产目录与默认形象 id（assets/avatars/<id>/image.png） */
+  avatarDir: string;
+  avatarId: string;
+  /** withVideo 任务允许的最大口播字数（对应参考音频 ≤15s，P4 标定） */
+  maxTextChars: number;
+}
+
+/**
+ * 解析口播能力配置（不抛错，缺 apiKey 在客户端构造时校验）
+ */
+export function resolveTalkConfig(env: NodeJS.ProcessEnv = process.env): TalkConfig {
+  return {
+    apiKey: env.DASHSCOPE_API_KEY,
+    baseUrl:
+      env.MAAS_BASE_URL ||
+      'https://llm-bp3e6hufsqhewhcr.cn-beijing.maas.aliyuncs.com/api/v1',
+    uploadsBaseUrl: env.DASHSCOPE_UPLOADS_BASE_URL || 'https://dashscope.aliyuncs.com/api/v1',
+    model: env.TALK_MODEL || 'wan3.0-video-prime',
+    resolution: env.TALK_RESOLUTION || '480P',
+    ratio: env.TALK_RATIO || '9:16',
+    duration: env.TALK_DURATION ? Number(env.TALK_DURATION) : -1,
+    promptExtend: (env.TALK_PROMPT_EXTEND ?? 'false') === 'true',
+    pollIntervalMs: Number(env.TALK_POLL_INTERVAL_MS || 15_000),
+    timeoutMs: Number(env.TALK_TIMEOUT_MS || 600_000),
+    avatarDir: env.AVATAR_DIR || path.join(REPO_ROOT, 'assets', 'avatars'),
+    avatarId: env.AVATAR_ID || 'default',
+    maxTextChars: Number(env.LIPSYNC_TEXT_MAX_CHARS || 60),
+  };
+}

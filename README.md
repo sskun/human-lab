@@ -53,10 +53,11 @@ npm run dev:web            # 终端2：前端 http://localhost:5173（/api、/me
 
 ```bash
 npm run build              # 构建 shared + server（nest build）
-npm test                   # 冒烟测试（真实调用：TTS 合成 → ASR 识别 → LLM 对话各一次）
+npm test                   # 单元测试（mock，秒级）+ 冒烟测试（真实调用：TTS → ASR → LLM 各一次）
 npm run tts                # 乐高块01 CLI：命令行直接合成语音
 npm run asr                # 乐高块02 CLI：命令行识别音频文件/URL → 文字
 npm run llm                # 乐高块03 CLI：命令行对话（流式输出，--no-thinking 关思考）
+npm run talk               # 乐高块04 CLI：口播稿 → 数字人口播视频（约 1 分钟，产出 output/*.mp4）
 ```
 
 ## 数据流
@@ -118,7 +119,7 @@ await chat(history, { onContent: (d) => append(d) });       // 传回调即流�
 | 01 | TTS 文本转语音（`apps/server/src/capabilities/tts.ts`） | ✅ |
 | 02 | ASR 语音识别（`apps/server/src/capabilities/asr.ts`，设计见 docs/asr-design.md） | ✅ |
 | 03 | LLM 对话回复（`apps/server/src/capabilities/llm.ts`，流式/思考/多轮，实时聊天备料） | ✅ |
-| 04 | 口播视频（口播稿 + 形象图 → 数字人口播，选型万相 wan3.0-video-prime，设计见 docs/lipsync-design.md） | 📐 设计完成 |
+| 04 | 口播视频（口播稿 + 形象图 → 数字人口播，wan3.0-video-prime，设计见 docs/lipsync-design.md） | ✅（探测 P1~P5 通过，实测 53 字→10s 视频→67s 生成） |
 | 05 | 服务化（NestJS 任务接口） | ✅（合成 + 识别 + 聊天会话） |
 | 06 | 前端网页 | ✅（聊天面板 + 朗读面板 + 历史明细） |
 | 07 | 实时聊天（语音 → ASR → LLM → TTS 全链路对话） | ✅（免按键连续对话 + 明细落库） |

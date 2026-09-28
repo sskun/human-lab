@@ -15,6 +15,10 @@ export interface TaskView {
   /** status === 'done' 时存在，如 /media/tts-xxx.mp3（经 vite 代理或同源访问）；
    *  asr 任务则指向归档的录音文件（可回放核对识别质量） */
   audioUrl?: string;
+  /** 口播任务（withVideo）done 时存在，如 /media/talking-xxx.mp4 */
+  videoUrl?: string;
+  /** processing 期间的流水线阶段：tts=合成音频（秒级） | lipsync=口播视频生成中（分钟级） */
+  stage?: 'tts' | 'lipsync';
   /** 任务相关文本：tts 任务为待合成的输入文本，asr 任务为识别出的文字 */
   text?: string;
   error?: string | null;
@@ -25,6 +29,8 @@ export interface SpeakRequest {
   text: string;
   /** 可选音色，缺省用 .env 里的 TTS_VOICE */
   voice?: string;
+  /** 勾选后走口播流水线：TTS → wan3.0-video-prime 生成数字人口播视频（分钟级） */
+  withVideo?: boolean;
 }
 
 /** POST /api/speak 响应体（202，任务已受理，异步处理） */

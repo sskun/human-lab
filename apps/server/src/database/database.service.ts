@@ -24,6 +24,8 @@ export class DatabaseService implements OnModuleInit {
         model      TEXT,
         file_path  TEXT,
         bytes      INTEGER,
+        video_path TEXT,
+        stage      TEXT,
         status     TEXT NOT NULL,
         error      TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -56,6 +58,25 @@ export class DatabaseService implements OnModuleInit {
         created_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       );
     `);
+    this.migrate();
+  }
+
+  /**
+   * 存量库迁移：早期版本的 tasks 表没有 video_path（口播视频产物）/ stage（流水线阶段）列，
+   * 按 PRAGMA table_info 缺哪列补哪列（CREATE TABLE 只对全新库生效，这里兜住老库）。
+   */
+  private migrate(): void {
+    const cols = (this.db.prepare('PRAGMA table_info(tasks)').all() as Record<string, unknown>[]).map((r) =>
+      String(r.name),
+    );
+    if (!cols.includes('video_path')) {
+      this.db.exec('ALTER TABLE tasks ADD COLUMN video_path TEXT');
+      console.log('[db] tasks 表迁移：已添加 video_path 列');
+    }
+    if (!cols.includes('stage')) {
+      this.db.exec('ALTER TABLE tasks ADD COLUMN stage TEXT');
+      console.log('[db] tasks 表迁移：已添加 stage 列');
+    }
   }
 
   prepare(sql: string): StatementSync {

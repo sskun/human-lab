@@ -19,7 +19,7 @@
 | 7 | 任务流水线在现有 `POST /api/speak` 上扩展：`withVideo: true` → TTS → 上传 → wan3.0 异步任务 → 下载转存；单任务双产物（audioUrl + videoUrl） | 与现有任务编排（tasks.ts）无缝衔接 |
 | 8 | 兜底：wan2.2-s2v（专门口型模型，图+音频→说话，<20s）保留为口型精度不达标时的降级路线，Provider 形状预留 | §3.1 模型决策 |
 
-**一句话：口播稿（≤60 字）→ TTS → 「形象图 + TTS 音频 + 口播 prompt 模板」喂给 wan3.0-video-prime → 1~5 分钟后得到竖屏 480P 口播视频，网页播放。**
+**一句话：口播稿（≤60 字）→ TTS → 「形象图 + TTS 音频 + 口播 prompt 模板」喂给 wan3.0-video-prime → 约 1 分钟后得到竖屏 480P 口播视频，网页播放。**
 
 ---
 
@@ -40,7 +40,7 @@
 - **G1 形象资产**：形象图（AI 生图获得，规避肖像权）目录约定与规范；预留商品图扩展位。
 - **G2 能力层**：`capabilities/lipsync.ts` 提供一行调用的 `generateTalkingVideo()`（本地图 + 本地音频 → 本地 mp4），内部封装上传 / 任务创建 / 轮询 / 下载；内置口播 prompt 模板。
 - **G3 服务接口**：`POST /api/speak` 增加 `withVideo` 开关；`TaskView` 增加 `videoUrl` 与 `stage`。
-- **G4 前端**：朗读面板增加 `<video>` 播放器、阶段文案（「合成中…」→「口播视频生成中，约 1~5 分钟…」）与「AI 生成」角标；口播稿限长提示。
+- **G4 前端**：朗读面板增加 `<video>` 播放器、阶段文案（「合成中…」→「口播视频生成中，约 1 分钟…」）与「AI 生成」角标；口播稿限长提示。
 - **G5 可观测**：口播任务落 SQLite（`type='talking'`），视频归档 `output/`，历史列表可见。
 
 ### 1.3 非目标（本期不做）
@@ -229,9 +229,23 @@ GET https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/api/v1/tasks/{task_id}
 
 probe 脚本落在 `lego/04-lipsync/talk-probe.mjs`，**探测结论回填 §3.6**。
 
-### 3.6 探测结论（待回填）
+### 3.6 探测结论（2026-09-28 实测回填，probe 脚本 = lego/04-lipsync/talk-probe.mjs）
 
-> 实施后在此记录：各用例实测结果、真实耗时、单价核对、踩坑记录。
+| # | 探测项 | 实测结论 |
+|---|---|---|
+| P1 | 模型可用性 | ✅ 专属端点 + 当前 Key 直接受理（task_id 即刻返回），`X-DashScope-Async: enable` 有效 |
+| P2 | 上传通道 | ✅ 打通，但有三处官方文档没写清的坑（见下「踩坑记录」） |
+| P3 | 口播效果 | ✅ 自动核验通过：形象/服装/背景与形象图零漂移，口型全程清晰开合，自然眨眼与手势（挥手、讲解手势），画面稳定；输出视频时长与音频完全对齐（9.98s vs 10s），参考音频即成片音轨（音色=TTS 原声） |
+| P4 | 时长对齐 | ✅ `duration:-1`（智能时长）下**输出视频时长 = 音频时长**（差 0.02s）；语速标定：`longanlingxin` 实测 **5.3 字/秒**（53 字 → 10.0s）→ 15s 上限约 80 字；`LIPSYNC_TEXT_MAX_CHARS` 维持 60（为男声/慢速音色留余量） |
+| P5 | 生成耗时 | ✅ 受理→完成 **66.8s**（5s 轮询间隔），远快于官方 1~5min 口径；`usage={duration:9.98, SR:480, fps:30, ratio:'9:16'}` |
+
+**P2 踩坑记录（都已固化进 `capabilities/upload.ts` / `lipsync.ts`）：**
+
+1. `GET /api/v1/uploads?action=getPolicy` **必须带 `model` 参数**（`model=wan3.0-video-prime`），否则 400 `InvalidParameter`；且 uploads 只存在于公网端点 `dashscope.aliyuncs.com`，专属实例 host 返回 400
+2. OSS 表单上传的 `key` 字段是**裸对象键**（如 `dashscope-instant/<前缀>/<文件名>`，不带 `oss://` 前缀，也无尾斜杠拼接问题）；`oss://` 只加在最终传给模型的 URL 上
+3. wan3.0 创建任务时若 `media.url` 用 `oss://` 临时 URL，**必须带请求头 `X-DashScope-OssResourceResolve: enable`**，否则任务秒败：`media.url scheme must be http/https, got: 'oss'`（真实踩坑：首次探测任务 5s 内 FAILED 即此原因）
+
+实测素材：形象图 1792×2400 PNG（5.89MB）、TTS mp3 10s/156KB、53 字口播稿；产物 `output/talking-probe-1790555184414.mp4`（9:16、480P、30fps、5.84MB）。
 
 ---
 
@@ -349,7 +363,7 @@ export interface SpeakRequest {
 ### 4.5 前端设计（朗读面板增量）
 
 - 「合成语音」按钮旁加开关：**「生成口播视频」**（勾选后提交 `withVideo: true`）
-- 阶段文案按 `stage` 区分：`tts` → 「合成中…」（秒级）；`lipsync` → 「口播视频生成中，约 1~5 分钟，请稍候…」
+- 阶段文案按 `stage` 区分：`tts` → 「合成中…」（秒级）；`lipsync` → 「口播视频生成中，约 1 分钟，请稍候…」
 - done 且有 `videoUrl` → `<video className="player" controls autoPlay playsInline src={videoUrl}>` 替代 `<audio>`；容器叠加「AI 生成」角标
 - 文本限长提示：勾选视频时超过 `LIPSYNC_TEXT_MAX_CHARS`（60 字）即时提示「口播视频单条最长约 15 秒，请精简文案」
 - 聊天面板不动（非目标 §1.3）
@@ -411,7 +425,7 @@ human-lab/
 - **口型精度风险（最大不确定项）**：wan3.0 的「图+音频」是全能参考驱动，非专门口型模型，逐字对齐精度需 P3 实测；不达标切 wan2.2-s2v（Provider 已预留，编排层零改动）
 - **形象一致性风险**：全能参考可能出现换装/发色漂移 → prompt 模板强约束「形象服装发型完全一致」+ probe 验收
 - **音频 15s 上限**：口播稿一次约 60 字 → 提交时前置拦截（P4 标定）；长稿切段拼接列入 M5
-- **延迟与排队**：生成 1~5 分钟（prime 已提速）→ 阶段文案管理预期；连续提交自动排队
+- **延迟与排队**：生成实测约 1 分钟（66.8s，prime 高速版）→ 阶段文案管理预期；连续提交自动排队
 - **成本**：480P 约 ¥0.45/秒（待对账），一条 15s ≈ ¥6.75 → 调试期先纯音频试听文案再勾选视频；`usage.duration` 落任务记录对账
 - **肖像与审核**：MVP 用 AI 生图脸；云端对人物形象有审核，不通过给可读错误不重试
 - **深度合成合规**：前端「AI 生成」显式角标（`watermark` 参数保持 false，用自己的标识）；对境内公众提供服务前完成隐式标识与备案评估

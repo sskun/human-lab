@@ -15,21 +15,35 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
-import type { ListenRequest, TaskView } from '@human-lab/shared';
+import type { ListenRequest, SpeakRequest, TaskView } from '@human-lab/shared';
+import { ConfigService } from '../config.service.js';
 import { TasksService } from './tasks.service.js';
 import { decodeListenAudio } from '../common/audio.js';
 
 @Controller('api')
 export class TasksController {
-  constructor(private readonly tasks: TasksService) {}
+  constructor(
+    private readonly tasks: TasksService,
+    private readonly config: ConfigService,
+  ) {}
 
   // 受理合成任务：校验参数 → 入库（queued）→ 后台执行 → 立即返回 taskId
+  // withVideo=true 时走口播流水线（分钟级），口播稿按参考音频 ≤15s 上限限长（P4 标定）
   @Post('speak')
   @HttpCode(HttpStatus.ACCEPTED)
-  speak(@Body() body?: { text?: string; voice?: string }): { taskId: string } {
-    const { text, voice } = body ?? {};
+  speak(@Body() body?: SpeakRequest): { taskId: string } {
+    const { text, voice, withVideo } = body ?? {};
     if (!text || !text.trim()) throw new BadRequestException('text 不能为空');
-    return { taskId: this.tasks.create(text.trim(), voice) };
+    const trimmed = text.trim();
+    if (withVideo) {
+      const max = this.config.talk.maxTextChars;
+      if (trimmed.length > max) {
+        throw new BadRequestException(
+          `口播视频单条最长约 15 秒：请把文案控制在 ${max} 字以内（当前 ${trimmed.length} 字）`,
+        );
+      }
+    }
+    return { taskId: this.tasks.create(trimmed, voice, withVideo === true) };
   }
 
   // 语音识别（同步）：校验 base64 → 落库 → 归档录音 → 调 ASR 能力 → 返回文字；

@@ -16,7 +16,8 @@
     "tts": "npm run build -w @human-lab/server && node lego/01-tts/tts-dashscope.mjs",
     "asr": "npm run build -w @human-lab/server && node lego/02-asr/asr-dashscope.mjs",
     "llm": "npm run build -w @human-lab/server && node lego/03-llm/llm-chat.mjs",
-    "test": "npm run smoke -w @human-lab/server"
+    "talk": "npm run build -w @human-lab/server && node lego/04-lipsync/talk-probe.mjs",
+    "test": "npm run test:unit -w @human-lab/server && npm run smoke -w @human-lab/server"
   },
   "keywords": [],
   "author": "",

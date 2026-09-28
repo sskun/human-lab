@@ -12,10 +12,12 @@
 
 | # | 块 | 输入 → 输出 | 状态 |
 |---|----|------------|------|
-| 01 | `01-tts/tts-dashscope.mjs` 文本转语音（演示 CLI，能力在 `apps/server/src/capabilities/tts.ts`） | 文本 → `output/*.mp3` | ✅ |
-| 02 | 口型视频（形象 + 音频 → 视频） | `avatar.jpg` + wav → mp4 | ⬜ |
-| 03 | 服务化（Express 任务接口） | — | ✅（见 apps/server） |
-| 04 | 前端网页（文本框 + `<audio>`/`<video>` 播放） | — | ✅（见 apps/web） |
+| 01 | `01-tts/tts-dashscope.mjs` 文本转语音（能力在 `apps/server/src/capabilities/tts.ts`） | 文本 → `output/*.mp3` | ✅ |
+| 02 | `02-asr/asr-dashscope.mjs` 语音识别（能力在 `capabilities/asr.ts`，设计见 docs/asr-design.md） | 音频 → 文字 | ✅ |
+| 03 | `03-llm/llm-chat.mjs` LLM 对话（能力在 `capabilities/llm.ts`） | 消息 → 回复 | ✅ |
+| 04 | `04-lipsync/talk-probe.mjs` 口播视频（能力在 `capabilities/lipsync.ts`，设计见 docs/lipsync-design.md） | 形象图+口播稿 → `output/*.mp4` | ✅ |
+| 05 | 服务化（NestJS 任务接口，见 apps/server） | — | ✅ |
+| 06 | 前端网页（文本框 + `<audio>`/`<video>` 播放） | — | ✅ |
 
 ## 块 01：TTS（DashScope WebSocket）
 
@@ -56,8 +58,25 @@ afplay output.mp3
 
 实测性能：一句话约 1.5~2.5s 出完整 mp3（48KB/13字）。
 
+## 块 04：口播视频（wan3.0-video-prime，探测 + CLI）
+
+形象图 + 口播稿 → 数字人口播 mp4（9:16/480P，实测 53 字 ≈ 10s 音频 ≈ 67s 生成）：
+
+```bash
+npm run talk   # = 构建 server + 运行 talk-probe.mjs（默认口播稿/默认形象）
+# 自定义：
+node lego/04-lipsync/talk-probe.mjs --text "口播稿（≤60字）" --image assets/avatars/default/image.png --out output/my.mp4
+```
+
+探测踩坑（已固化进能力层，详见 docs/lipsync-design.md §3.6）：
+
+| 报错 | 原因 | 解决 |
+|---|---|---|
+| getPolicy 400 `InvalidParameter` | 缺 `model` 参数；或走了专属实例 host（uploads 仅公网端点有） | `action=getPolicy&model=<模型名>`，host 用 `dashscope.aliyuncs.com` |
+| OSS 表单 403 `Policy Condition failed` | 表单 `key` 带 `oss://` 前缀 | key 必须是裸对象键，`oss://` 只加在模型入参 URL 上 |
+| 任务秒败 `media.url scheme must be http/https, got: 'oss'` | 创建任务未带 `X-DashScope-OssResourceResolve: enable` 头 | wan3.0 请求统一加该头，服务端才会解析 oss:// 临时 URL |
+
 ## 下一块预告
 
-块 02（口型视频）建议路线：
-- **云端**：百炼 EMO（`image_url + audio_url` → 异步任务 → mp4），协议是 HTTPS 而非 ws，Node 用原生 `fetch` 即可，零依赖；
-- **本地**：SadTalker / MuseTalk（Python 侧独立进程，Node 只负责调度）。
+- 长口播稿切段生成 + ffmpeg 拼接；商品图带货模板（第二张 reference_image）
+- 实时数字人（MuseTalk/LiveTalking 本地 GPU 路线）

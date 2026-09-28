@@ -9,6 +9,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
+    "test:unit": "tsx --test tests/*.test.ts",
     "smoke": "tsx src/smoke.ts"
   },
   "license": "ISC",

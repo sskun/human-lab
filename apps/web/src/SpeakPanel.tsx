@@ -1,7 +1,7 @@
 /**
  * 朗读模式（原 Demo 主界面）：
  *   文本框输入/按住说话 → POST /api/speak 拿 taskId → 每秒轮询 GET /api/tasks/:id
- *   → status === 'done' 后用 <audio> 播放 /media/xxx.mp3
+ *   → done 后播放：纯音频任务播 <audio>；勾选「口播视频」的任务播 <video>（带 AI 生成角标）
  */
 import { useEffect, useRef, useState } from 'react';
 import type { ListenResponse, SpeakResponse, TaskView } from '@human-lab/shared';
@@ -10,9 +10,12 @@ import './App.css';
 
 /** 单次录音上限（秒），到时自动截断送识别，防止误触长录 */
 const MAX_RECORD_SECONDS = 60;
+/** 口播视频单条的字数上限（对应参考音频 ≤15s，与 server LIPSYNC_TEXT_MAX_CHARS 一致） */
+const MAX_VIDEO_TEXT_CHARS = 60;
 
 export default function SpeakPanel() {
   const [text, setText] = useState('你好，我是你的专属数字人，很高兴认识你。');
+  const [withVideo, setWithVideo] = useState(false); // 勾选：生成数字人口播视频（分钟级）
   const [taskId, setTaskId] = useState<string | null>(null); // 当前轮询的任务
   const [task, setTask] = useState<TaskView | null>(null); // 最近一次查询到的任务状态
   const [submitting, setSubmitting] = useState(false);
@@ -28,17 +31,21 @@ export default function SpeakPanel() {
   const recTickRef = useRef<number | null>(null); // 录音计时器句柄
   const recSecondsRef = useRef(0); // 计时器闭包读不到最新 state，用 ref 判断是否到上限
 
-  /** 提交合成任务（vite 已把 /api 代理到 Express:3001，所以直接写相对路径） */
+  /** 提交合成/口播任务（vite 已把 /api 代理到后端:3001，所以直接写相对路径） */
   async function handleSpeak() {
     setError(null);
     setTask(null);
     setTaskId(null);
+    if (withVideo && text.trim().length > MAX_VIDEO_TEXT_CHARS) {
+      setError(`口播视频单条最长约 15 秒：请把文案控制在 ${MAX_VIDEO_TEXT_CHARS} 字以内（当前 ${text.trim().length} 字）`);
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, withVideo }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -193,12 +200,21 @@ export default function SpeakPanel() {
             </>
           ) : busy ? (
             <>
-              <span className="spinner" /> 合成中…
+              <span className="spinner" /> {withVideo ? '生成中…' : '合成中…'}
             </>
           ) : (
             '合成语音'
           )}
         </button>
+        <label className="video-toggle" title="用 wan3.0 生成数字人口播视频，耗时约 1 分钟">
+          <input
+            type="checkbox"
+            checked={withVideo}
+            onChange={(e) => setWithVideo(e.target.checked)}
+            disabled={busy || submitting}
+          />
+          生成数字人口播视频
+        </label>
         <button
           className={`btn mic-btn${recording ? ' recording' : ''}`}
           disabled={listening || busy || submitting}
@@ -243,7 +259,11 @@ export default function SpeakPanel() {
           {task.status === 'processing' && (
             <span className="pill pill-thinking">
               <span className="spinner" />
-              合成中…
+              {task.stage === 'lipsync'
+                ? '口播视频生成中，约 1 分钟，请稍候…'
+                : task.stage === 'tts'
+                  ? '合成中…'
+                  : '处理中…'}
             </span>
           )}
           {task.status === 'failed' && <span className="pill pill-failed">失败（{task.error}）</span>}
@@ -251,8 +271,14 @@ export default function SpeakPanel() {
         </div>
       )}
 
-      {/* done 后展示播放器；key 使新任务自动替换旧播放器 */}
-      {task?.status === 'done' && task.audioUrl && (
+      {/* done 后展示播放器；key 使新任务自动替换旧播放器。口播任务优先播视频（叠加 AI 生成角标） */}
+      {task?.status === 'done' && task.videoUrl && (
+        <div className="video-wrap" key={task.videoUrl}>
+          <video className="player" controls autoPlay playsInline src={task.videoUrl} />
+          <span className="ai-badge">AI 生成</span>
+        </div>
+      )}
+      {task?.status === 'done' && !task.videoUrl && task.audioUrl && (
         <audio className="player" controls autoPlay src={task.audioUrl} key={task.audioUrl} />
       )}
     </>
