@@ -102,11 +102,32 @@ export class TasksRepository {
     return row ? rowToTask(row) : undefined;
   }
 
-  /** 最近的生成记录（新的在前） */
-  listTasks(limit = 20): TaskRecord[] {
+  /** 最近的生成记录（新的在前）；filter 可按类型/状态过滤（管理后台用） */
+  listTasks(limit = 20, filter: { type?: string; status?: TaskStatus } = {}): TaskRecord[] {
+    const where: string[] = [];
+    const args: Array<string | number> = [];
+    if (filter.type) {
+      where.push('type = ?');
+      args.push(filter.type);
+    }
+    if (filter.status) {
+      where.push('status = ?');
+      args.push(filter.status);
+    }
+    args.push(limit);
     const rows = this.db
-      .prepare('SELECT * FROM tasks ORDER BY created_at DESC, id LIMIT ?')
-      .all(limit) as Record<string, unknown>[];
+      .prepare(
+        `SELECT * FROM tasks ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY created_at DESC, id LIMIT ?`,
+      )
+      .all(...args) as Record<string, unknown>[];
     return rows.map(rowToTask);
+  }
+
+  /** 按 类型 × 状态 分组计数（管理后台概览用） */
+  countByTypeAndStatus(): Array<{ type: string; status: TaskStatus; n: number }> {
+    const rows = this.db
+      .prepare('SELECT type, status, COUNT(*) AS n FROM tasks GROUP BY type, status')
+      .all() as Record<string, unknown>[];
+    return rows.map((r) => ({ type: String(r.type), status: String(r.status) as TaskStatus, n: Number(r.n) }));
   }
 }

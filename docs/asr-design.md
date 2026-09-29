@@ -175,7 +175,7 @@ SSE 流式模式：每个 `data:` 帧结构与上相同，`text`/`sentence` 为*
 ### 4.1 数据流
 
 ```
-web(App.tsx 麦克风)                          server(:3001)
+web(App.tsx 麦克风)                          server(:3101)
  │ WebAudio 采集 PCM(16k mono)                │
  │ 编码 WAV → base64                          │
  ├────POST /api/listen {audioBase64,format}──▶│ 校验/落库(queued) → 写 output/asr-<id>.wav

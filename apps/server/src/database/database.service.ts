@@ -2,12 +2,13 @@
 // 连接与建表收敛在这里，进程内单例；具体读写由 tasks/chat 两个仓库承担。
 import fs from 'node:fs';
 import path from 'node:path';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { ConfigService } from '../config.service.js';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
+  private readonly logger = new Logger('Database');
   private db!: DatabaseSync;
 
   constructor(private readonly config: ConfigService) {}
@@ -57,6 +58,16 @@ export class DatabaseService implements OnModuleInit {
         error        TEXT,
         created_at   TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
       );
+
+      -- 运行日志（AppLogger 写入，管理后台查看）：ts 精确到毫秒，便于同一秒内排序对照
+      CREATE TABLE IF NOT EXISTS app_logs (
+        id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'localtime')),
+        level   TEXT NOT NULL,
+        scope   TEXT NOT NULL DEFAULT '',
+        message TEXT NOT NULL,
+        meta    TEXT
+      );
     `);
     this.migrate();
   }
@@ -71,11 +82,11 @@ export class DatabaseService implements OnModuleInit {
     );
     if (!cols.includes('video_path')) {
       this.db.exec('ALTER TABLE tasks ADD COLUMN video_path TEXT');
-      console.log('[db] tasks 表迁移：已添加 video_path 列');
+      this.logger.log('tasks 表迁移：已添加 video_path 列');
     }
     if (!cols.includes('stage')) {
       this.db.exec('ALTER TABLE tasks ADD COLUMN stage TEXT');
-      console.log('[db] tasks 表迁移：已添加 stage 列');
+      this.logger.log('tasks 表迁移：已添加 stage 列');
     }
   }
 

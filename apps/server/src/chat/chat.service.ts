@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, Logger } from '@nestjs/common';
 import type { ChatSessionView, ChatTurnView } from '@human-lab/shared';
 import type { ChatMessage } from '../capabilities/llm.js';
 import { AsrService } from '../capabilities/asr.service.js';
@@ -37,6 +37,9 @@ export class ChatService {
 
   /** LLM 参与上下文的最大历史轮数 */
   private static readonly MAX_HISTORY_TURNS = 10;
+
+  /** 经 AppLogger 同时输出到控制台与 app_logs（管理后台「运行日志」） */
+  private readonly logger = new Logger('Chat');
 
   constructor(
     private readonly config: ConfigService,
@@ -104,7 +107,7 @@ export class ChatService {
     const fail = (err: unknown): ChatTurnView => {
       const message = err instanceof Error ? err.message : String(err);
       this.chatRepo.updateChatTurn(turnId, { status: 'failed', error: message });
-      console.error(`[chat ${sessionId} turn ${idx}] failed: ${message}`);
+      this.logger.error(`[chat ${sessionId} turn ${idx}] failed: ${message}`);
       return this.toTurnView(this.chatRepo.getChatTurn(turnId)!);
     };
 
@@ -131,7 +134,7 @@ export class ChatService {
         if (!inputText) return fail(new ChatError(400, '输入为空：请提供 text 或 audioBase64'));
         this.chatRepo.updateChatTurn(turnId, { inputText });
       }
-      console.log(
+      this.logger.log(
         `[chat ${sessionId} turn ${idx}] 输入(${input.audio ? 'voice' : 'text'}): ${JSON.stringify(inputText)}`,
       );
 
@@ -152,13 +155,13 @@ export class ChatService {
         outputText: reply.content,
         llmUsage: reply.usage ? JSON.stringify(reply.usage) : null,
       });
-      console.log(`[chat ${sessionId} turn ${idx}] 回复: ${JSON.stringify(reply.content)}`);
+      this.logger.log(`[chat ${sessionId} turn ${idx}] 回复: ${JSON.stringify(reply.content)}`);
 
       // ③ TTS 段：回复合成语音（voice 默认沿用 .env 的 TTS_VOICE）
       const outputAudioPath = path.join(dir, `turn-${idx}-reply.mp3`);
       const tts = await this.tts.synthesizeToFile(reply.content, { out: outputAudioPath });
       this.chatRepo.updateChatTurn(turnId, { outputAudio: tts.outFile, status: 'done' });
-      console.log(`[chat ${sessionId} turn ${idx}] done: ${tts.bytes} bytes -> ${tts.outFile}`);
+      this.logger.log(`[chat ${sessionId} turn ${idx}] done: ${tts.bytes} bytes -> ${tts.outFile}`);
 
       return this.toTurnView(this.chatRepo.getChatTurn(turnId)!);
     } catch (e) {

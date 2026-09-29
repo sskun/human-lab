@@ -98,3 +98,71 @@ export interface ChatTurnRequest {
   audioBase64?: string;
   format?: string;
 }
+
+// ———— 系统元信息（前台展示用，不含任何密钥） ————
+
+/** GET /api/meta 响应体：当前形象、默认音色、各能力模型与限制 */
+export interface AppMeta {
+  avatar: {
+    id: string;
+    /** 当前形象图地址（GET /api/avatar/image） */
+    imageUrl: string;
+  };
+  /** 默认 TTS 音色 */
+  voice: string;
+  models: { asr: string; llm: string; tts: string; talk: string };
+  limits: {
+    /** 口播视频单条文案字数上限（与 server LIPSYNC_TEXT_MAX_CHARS 一致） */
+    videoTextMaxChars: number;
+  };
+}
+
+// ———— 管理后台（只读：运行日志 / 任务记录 / 概览统计） ————
+
+/** 运行日志级别（Nest 的 log→info，verbose→debug，fatal→error） */
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+/** 一条运行日志 */
+export interface LogEntryView {
+  /** 自增 id，同时作为分页游标 */
+  id: number;
+  /** 本地时间，格式 YYYY-MM-DD HH:MM:SS.SSS */
+  ts: string;
+  level: LogLevel;
+  /** 模块（Nest Logger context，如 Tasks / Chat / Http） */
+  scope: string;
+  message: string;
+  /** 附加信息（error 的堆栈等），无则为 null */
+  meta: string | null;
+}
+
+/** GET /api/admin/logs 响应体：id 倒序；nextCursor 传给 before 取下一页，null 表示没有更多 */
+export interface LogListResponse {
+  items: LogEntryView[];
+  nextCursor: number | null;
+}
+
+/** 任务类型：tts=语音合成 / asr=语音识别 / talking=口播视频 */
+export type TaskType = 'tts' | 'asr' | 'talking';
+
+/** GET /api/admin/tasks 列表项：在 TaskView 基础上补充后台需要的字段 */
+export interface AdminTaskView extends TaskView {
+  type: string;
+  voice?: string | null;
+  model?: string | null;
+  bytes?: number | null;
+  createdAt: string;
+}
+
+/** GET /api/admin/overview 响应体 */
+export interface AdminOverview {
+  tasks: {
+    total: number;
+    byType: Record<string, number>;
+    byStatus: Record<TaskStatus, number>;
+  };
+  chat: { sessions: number; activeSessions: number; turns: number; failedTurns: number };
+  /** 最近 24 小时各级别日志条数 */
+  logs: { last24h: Record<LogLevel, number> };
+  system: { startedAt: string; uptimeSec: number; nodeVersion: string };
+}

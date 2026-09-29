@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { TaskView } from '@human-lab/shared';
 import { ConfigService } from '../config.service.js';
 import { AsrService } from '../capabilities/asr.service.js';
@@ -32,6 +32,9 @@ export interface ListenOutcome {
 
 @Injectable()
 export class TasksService {
+  /** 经 AppLogger 同时输出到控制台与 app_logs（管理后台「运行日志」） */
+  private readonly logger = new Logger('Tasks');
+
   constructor(
     private readonly config: ConfigService,
     private readonly repo: TasksRepository,
@@ -63,11 +66,11 @@ export class TasksService {
       const out = path.join(this.config.outputDir, `tts-${id}.mp3`);
       const result = await this.tts.synthesizeToFile(text, { out, config: voice ? { voice } : {} });
       this.repo.updateTask(id, { status: 'done', filePath: result.outFile, bytes: result.bytes });
-      console.log(`[task ${id}] done: ${result.bytes} bytes -> ${result.outFile}`);
+      this.logger.log(`[task ${id}] done: ${result.bytes} bytes -> ${result.outFile}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.repo.updateTask(id, { status: 'failed', error: message });
-      console.error(`[task ${id}] failed: ${message}`);
+      this.logger.error(`[task ${id}] failed: ${message}`);
     }
   }
 
@@ -86,11 +89,11 @@ export class TasksService {
       audioBytes = tts.bytes;
       // 音频是已付费产物：先落库（后续口播失败也保留），再进入 lipsync 阶段
       this.repo.updateTask(id, { status: 'processing', stage: 'lipsync', filePath: audioOut, bytes: audioBytes });
-      console.log(`[task ${id}] tts done: ${tts.bytes} bytes -> ${tts.outFile}`);
+      this.logger.log(`[task ${id}] tts done: ${tts.bytes} bytes -> ${tts.outFile}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.repo.updateTask(id, { status: 'failed', error: message }); // stage 保持 'tts'，产物为空
-      console.error(`[task ${id}] failed at tts: ${message}`);
+      this.logger.error(`[task ${id}] failed at tts: ${message}`);
       return;
     }
 
@@ -108,14 +111,14 @@ export class TasksService {
         videoPath: result.outFile,
         stage: null,
       });
-      console.log(
+      this.logger.log(
         `[task ${id}] done: audio ${audioBytes}B + video ${result.bytes}B (${result.durationSec}s, ` +
           `${result.ratio ?? '?'}, remote=${result.remoteTaskId}) -> ${result.outFile}`,
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.repo.updateTask(id, { status: 'failed', error: message }); // filePath（音频）保留
-      console.error(`[task ${id}] failed at lipsync: ${message}`);
+      this.logger.error(`[task ${id}] failed at lipsync: ${message}`);
     }
   }
 
@@ -138,14 +141,14 @@ export class TasksService {
       // 识别归档文件：扩展名即 format 声明值，真实格式由服务端自动探测兜底
       const result = await this.asr.recognize(out);
       this.repo.updateTask(id, { status: 'done', filePath: out, bytes: audio.length, text: result.text });
-      console.log(
+      this.logger.log(
         `[task ${id}] done: ${audio.length} bytes -> ${out}, text: ${JSON.stringify(result.text)}`,
       );
       return { taskId: id, text: result.text, duration: result.usage?.duration ?? null };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.repo.updateTask(id, { status: 'failed', error: message });
-      console.error(`[task ${id}] failed: ${message}`);
+      this.logger.error(`[task ${id}] failed: ${message}`);
       throw err;
     }
   }

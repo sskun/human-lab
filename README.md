@@ -8,7 +8,7 @@
 ```
 human-lab/
 ├─ apps/
-│  ├─ server/             # 后端：NestJS + TypeScript（端口 3001）
+│  ├─ server/             # 后端：NestJS + TypeScript（端口 3101）
 │  │  └─ src/
 │  │     ├─ main.ts       # 启动入口：JSON 上限 16MB、/media 静态挂载、全局异常过滤
 │  │     ├─ app.module.ts # 根模块：config / database / capabilities / tasks / chat
@@ -22,7 +22,7 @@ human-lab/
 │  │     ├─ database/     # SQLite 持久化（Node 内置 node:sqlite）：DatabaseService + tasks/chat 仓库
 │  │     ├─ common/       # base64 音频校验解码、全局异常过滤器（统一 { error } 响应）
 │  │     └─ config.ts     # 配置：环境变量 > .env > 默认值；OUTPUT_DIR/DATA_DIR
-│  └─ web/                # 前端：Vite + React + TypeScript（端口 5173）
+│  └─ web/                # 前端：Vite + React + TypeScript（端口 5273）
 │     └─ src/
 │        ├─ App.tsx       # 外壳：💬实时聊天 / 🔊朗读 双页签
 │        ├─ ChatPanel.tsx # 聊天面板：免按键连续对话（VAD 断句）、气泡、历史明细
@@ -45,8 +45,8 @@ human-lab/
 
 ```bash
 npm install                # 安装所有 workspace 依赖（prepare 自动构建 shared）
-npm run dev:server         # 终端1：后端 http://localhost:3001
-npm run dev:web            # 终端2：前端 http://localhost:5173（/api、/media 自动代理到 3001）
+npm run dev:server         # 终端1：后端 http://localhost:3101
+npm run dev:web            # 终端2：前端 http://localhost:5273（/api、/media 自动代理到 3101）
 ```
 
 其他命令：

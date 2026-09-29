@@ -161,6 +161,22 @@ export class ChatRepository {
     this.db.prepare('UPDATE chat_sessions SET turn_count = turn_count + 1 WHERE id = ?').run(sessionId);
   }
 
+  /** 会话与轮次计数（管理后台概览用） */
+  stats(): { sessions: number; activeSessions: number; turns: number; failedTurns: number } {
+    const s = this.db
+      .prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(status = 'active'), 0) AS active FROM chat_sessions`)
+      .get() as Record<string, unknown>;
+    const t = this.db
+      .prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(status = 'failed'), 0) AS failed FROM chat_turns`)
+      .get() as Record<string, unknown>;
+    return {
+      sessions: Number(s.n),
+      activeSessions: Number(s.active),
+      turns: Number(t.n),
+      failedTurns: Number(t.failed),
+    };
+  }
+
   /** 按轮次 id 查单轮（编排过程中回填明细用） */
   getChatTurn(id: string): ChatTurnRecord | undefined {
     const row = this.db.prepare('SELECT * FROM chat_turns WHERE id = ?').get(id) as

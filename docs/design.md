@@ -144,14 +144,14 @@ class LipSyncProvider(Protocol):
 ```
 human-lab/
 ├─ apps/
-│  ├─ server/             # NestJS + TS（:3001）：POST /api/speak、GET /api/tasks/:id、/media 静态
+│  ├─ server/             # NestJS + TS（:3101）：POST /api/speak、GET /api/tasks/:id、/media 静态
 │  │  └─ src/
 │  │     ├─ main.ts / app.module.ts      # 启动入口 + 根模块
 │  │     ├─ tasks/ / chat/               # 任务与聊天编排 + 各自的 Controller
 │  │     ├─ capabilities/                # TTS/ASR/LLM 能力（纯能力层 + *.service.ts DI 封装）✅
 │  │     ├─ database/                    # SQLite（data/human-lab.db，node:sqlite 零依赖）
 │  │     └─ config.ts                    # OUTPUT_DIR / DATA_DIR / .env 加载
-│  └─ web/                # Vite + React + TS（:5173，/api、/media 代理到 3001）
+│  └─ web/                # Vite + React + TS（:5273，/api、/media 代理到 3101）
 │     └─ src/{App.tsx, main.tsx}
 ├─ packages/
 │  └─ shared/             # @human-lab/shared：server/web 共享的 API 契约（纯类型，零依赖）

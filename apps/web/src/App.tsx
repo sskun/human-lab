@@ -1,40 +1,38 @@
 /**
- * 数字人页面外壳：两个模式页签
- *   朗读：文本/按住说话 → 合成语音 → 播放（SpeakPanel）
- *   聊天：会话制实时对话，按住说话/打字 → ASR → LLM → TTS → 播放（ChatPanel）
+ * 应用外壳：顶栏 + 按路由渲染页面
+ *   /chat   实时聊天（会话制，听 → 想 → 说）
+ *   /video  数字人视频（文案 → 口播视频 / 语音）
+ *   /admin  后台（概览 / 运行日志 / 任务记录 / 会话记录）
  */
-import { useState } from 'react';
-import SpeakPanel from './SpeakPanel';
-import ChatPanel from './ChatPanel';
-import './App.css';
+import { useEffect } from 'react';
+import { navigate, useRoute } from './lib/router';
+import TopNav from './components/TopNav';
+import ChatPage from './pages/ChatPage';
+import VideoPage from './pages/VideoPage';
+import AdminPage from './pages/admin/AdminPage';
 
-type Mode = 'speak' | 'chat';
+const TITLES = { chat: '实时聊天', video: '数字人视频', admin: '后台' } as const;
 
 export default function App() {
-  const [mode, setMode] = useState<Mode>('chat');
+  const route = useRoute();
+
+  // 路径归一：/ → /chat、未知路径回落等，用 replace 不产生多余历史记录
+  useEffect(() => {
+    if (window.location.pathname !== route.path) navigate(route.path, true);
+    document.title = `${TITLES[route.page]} · Human Lab`;
+  }, [route]);
 
   return (
-    <main className="page">
-      <header className="hero">
-        <div className="hero-avatar" aria-hidden>
-          🫧
-        </div>
-        <div>
-          <h1>数字人 Demo</h1>
-          <p className="subtitle">让数字人开口朗读，或与它实时聊天（听 → 想 → 说）</p>
-        </div>
-      </header>
-
-      <div className="tabs">
-        <button className={`tab-btn${mode === 'chat' ? ' on' : ''}`} onClick={() => setMode('chat')}>
-          💬 实时聊天
-        </button>
-        <button className={`tab-btn${mode === 'speak' ? ' on' : ''}`} onClick={() => setMode('speak')}>
-          🔊 朗读模式
-        </button>
-      </div>
-
-      {mode === 'chat' ? <ChatPanel /> : <SpeakPanel />}
-    </main>
+    <>
+      <a href="#main" className="skip-link">
+        跳到主要内容
+      </a>
+      <TopNav route={route} />
+      <main id="main" className={`main main-${route.page}`}>
+        {route.page === 'chat' && <ChatPage />}
+        {route.page === 'video' && <VideoPage />}
+        {route.page === 'admin' && <AdminPage tab={route.tab} />}
+      </main>
+    </>
   );
 }

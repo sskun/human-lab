@@ -14,4 +14,11 @@ export type {
   ChatSessionView,
   ChatTurnView,
   ChatTurnRequest,
+  AppMeta,
+  LogLevel,
+  LogEntryView,
+  LogListResponse,
+  TaskType,
+  AdminTaskView,
+  AdminOverview,
 } from './types.js';
